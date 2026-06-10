@@ -2,6 +2,7 @@ package com.ec9in6.dota2stats.ui
 
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.ec9in6.dota2stats.data.api.OpenDotaClient
+import com.ec9in6.dota2stats.data.model.*
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -52,26 +53,23 @@ class PlayerViewModel(
                 val wl = api.getWinLoss(cleanId)
                 val topHeroesRaw = api.getTopHeroes(cleanId).take(3)
 
-                val topHeroes =
-                    topHeroesRaw.map { raw ->
-                        val heroName = heroesMap[raw.heroId] ?: "Unknown Hero"
-                        val winRate = if (raw.games > 0) ((raw.win.toFloat() / raw.games) * 100).toInt() else 0
-                        HeroStat(heroName, raw.games, winRate)
-                    }
+                val topHeroes = topHeroesRaw.map { raw ->
+                    val heroName = heroesMap[raw.heroId] ?: "Unknown Hero"
+                    val winRate = if (raw.games > 0) ((raw.win.toFloat() / raw.games) * 100).toInt() else 0
+                    HeroStat(heroName, raw.games, winRate)
+                }
 
-                val avatar =
-                    player.profile.avatarFull?.let { url ->
-                        try {
-                            val bytes = httpClient.get(url).readBytes()
-                            SkiaImage.makeFromEncoded(bytes).toComposeImageBitmap()
-                        } catch (e: Exception) {
-                            null
-                        }
+                val avatar = player.profile.avatarFull?.let { url ->
+                    try {
+                        val bytes = httpClient.get(url).bodyAsBytes()
+                        SkiaImage.makeFromEncoded(bytes).toComposeImageBitmap()
+                    } catch (e: Exception) {
+                        null
                     }
+                }
 
                 _uiState.value = PlayerScreenState.Success(player, wl, avatar, topHeroes)
             } catch (e: Exception) {
-                // Теперь мы увидим реальную причину на экране, если запрос снова упадет
                 val errorMsg = e.message ?: e.toString()
                 _uiState.value = PlayerScreenState.Error("Ошибка: $errorMsg")
             }
